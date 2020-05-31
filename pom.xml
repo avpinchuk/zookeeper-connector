@@ -43,7 +43,7 @@
 
     <scm>
         <connection>scm:git:git:github.com/avpinchuk/zookeeper-connector.git</connection>
-        <developerConnection>https://github.com/avpinchuk/zookeeper-connector.git</developerConnection>
+        <developerConnection>https://git@github.com/avpinchuk/zookeeper-connector.git</developerConnection>
         <url>https://github.com/avpinchuk/zookeeper-connector</url>
         <tag>master</tag>
     </scm>

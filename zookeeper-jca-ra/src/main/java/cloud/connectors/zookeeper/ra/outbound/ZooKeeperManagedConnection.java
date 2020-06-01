@@ -62,6 +62,11 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
     private ZooKeeperConnectionImpl connectionHandle;
     // We doesn't work with this set directly.
     // They managed by the application server.
+    // Since an application server may modify the list of
+    // event listeners at a time when the ManagedConnection
+    // may be iterating through its list of event listeners, the
+    // resource adapter is recommended to handle this scenario
+    // by synchronizing access to its list of event listeners
     private final Set<ConnectionEventListener> eventListeners;
 
     public ZooKeeperManagedConnection(ZooKeeperManagedConnectionFactory managedConnectionFactory,
@@ -159,7 +164,9 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
      */
     @Override
     public void addConnectionEventListener(ConnectionEventListener connectionEventListener) {
-        eventListeners.add(connectionEventListener);
+        synchronized (eventListeners) {
+            eventListeners.add(connectionEventListener);
+        }
     }
 
     /**
@@ -167,7 +174,9 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
      */
     @Override
     public void removeConnectionEventListener(ConnectionEventListener connectionEventListener) {
-        eventListeners.remove(connectionEventListener);
+        synchronized (eventListeners) {
+            eventListeners.remove(connectionEventListener);
+        }
     }
 
     /**
@@ -465,7 +474,9 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
     void closeHandle(ZooKeeperConnection handle) {
         ConnectionEvent event = new ConnectionEvent(this, ConnectionEvent.CONNECTION_CLOSED);
         event.setConnectionHandle(handle);
-        eventListeners.forEach(eventListener -> eventListener.connectionClosed(event));
+        synchronized (eventListeners) {
+            eventListeners.forEach(eventListener -> eventListener.connectionClosed(event));
+        }
     }
 
 }

@@ -60,20 +60,6 @@ public interface ZooKeeperConnection extends Closeable {
      * sequence number is always fixed length of ten zero-padded digits. Once such a
      * node is created, the sequential number will be incremented by one.
      *
-     * <p>If a node with the same actual path already exists in the ZooKeeper, a
-     * {@link org.apache.zookeeper.KeeperException.NodeExistsException NodeExists}
-     * {@link ResourceException} will be thrown. Note that since a different actual path
-     * is used for each invocation of creating sequential node with the same path argument,
-     * the call will never throw this exception for a sequential nodes.
-     *
-     * <p>If the parent node does not exists in the ZooKeeper,
-     * a {@link org.apache.zookeeper.KeeperException.NoNodeException NoNode}
-     * {@link ResourceException} will be thrown.
-     *
-     * <p>An ephemeral node cannot have children. If the parent node of the given path is ephemeral, a
-     * {@link org.apache.zookeeper.KeeperException.NoChildrenForEphemeralsException NoChildrenForEphemerals}
-     * {@link ResourceException} will be thrown.
-     *
      * <p>This operation, if successful, will trigger all watches left on this node for the
      * event type {@link org.apache.zookeeper.Watcher.Event.EventType#NodeCreated NodeCreated}
      * and the watches left on the parent node of the this node for the event type
@@ -87,8 +73,8 @@ public interface ZooKeeperConnection extends Closeable {
      * @param acl the acl for the node
      * @param createMode specifying whether the node to be created is ephemeral and/or sequential
      * @return the actual path of the created node
-     * @throws ResourceException if the server returns a non-zero error code or
-     * the operation was interrupted
+     * @throws javax.resource.spi.EISSystemException if the server returns a non-zero error code
+     * @throws javax.resource.spi.CommException if the operation was interrupted
      * @throws IllegalArgumentException if an invalid path is specified
      * @see org.apache.zookeeper.ZooDefs.Perms ZooDefs.Perms
      * @see org.apache.zookeeper.ZooDefs.Ids ZooDefs.Ids
@@ -109,22 +95,6 @@ public interface ZooKeeperConnection extends Closeable {
      * sequence number is always fixed length of ten zero-padded digits. Once such a
      * node is created, the sequential number will be incremented by one.
      *
-     * <p>If a node with the same actual path already exists in the ZooKeeper, a
-     * {@link org.apache.zookeeper.KeeperException.NodeExistsException NodeExists}
-     * {@link ResourceException} will be thrown. Note that since a different actual
-     * path is used for each invocation of creating sequential node with the same
-     * path argument, the call will never throw the
-     * {@link org.apache.zookeeper.KeeperException.NodeExistsException NodeExists}
-     * {@link ResourceException}.
-     *
-     * <p>If the parent node does not exists in the ZooKeeper,
-     * {@link org.apache.zookeeper.KeeperException.NoNodeException NoNode}
-     * {@link ResourceException} will be thrown.
-     *
-     * <p>An ephemeral node cannot have children. If the parent node of the given path is ephemeral, a
-     * {@link org.apache.zookeeper.KeeperException.NoChildrenForEphemeralsException NoChildrenForEphemerals}
-     * {@link ResourceException} will be thrown.
-     *
      * <p>This operation, if successful, will trigger all watches left on this node for the
      * event type {@link org.apache.zookeeper.Watcher.Event.EventType#NodeCreated NodeCreated}
      * and the watches left on the parent node of the this node for the event type
@@ -139,8 +109,8 @@ public interface ZooKeeperConnection extends Closeable {
      * @param createMode specifying whether the node to be created is ephemeral and/or sequential
      * @param stat the output {@link Stat} object
      * @return the actual path of the created node
-     * @throws ResourceException if the server returns a non-zero error code or
-     * the operation has been interrupted
+     * @throws javax.resource.spi.EISSystemException if the server returns a non-zero error code
+     * @throws javax.resource.spi.CommException if the operation was interrupted
      * @throws IllegalArgumentException if an invalid path is specified
      * @see org.apache.zookeeper.ZooDefs.Perms ZooDefs.Perms
      * @see org.apache.zookeeper.ZooDefs.Ids ZooDefs.Ids
@@ -163,8 +133,8 @@ public interface ZooKeeperConnection extends Closeable {
      * @param stat the output {@link Stat} object
      * @param ttl the time to live of a created node
      * @return the actual created node
-     * @throws ResourceException if the server returns a non-zero error code or the
-     * operation has been interrupted
+     * @throws javax.resource.spi.EISSystemException if the server returns a non-zero error code
+     * @throws javax.resource.spi.CommException if the operation was interrupted
      * @throws IllegalArgumentException if an invalid path is specified
      * @see #create(String, byte[], List, CreateMode, Stat)
      * @see org.apache.zookeeper.ZooDefs.Perms ZooDefs.Perms
@@ -174,12 +144,6 @@ public interface ZooKeeperConnection extends Closeable {
 
     /**
      * Delete the node with the given {@code path}.
-     *
-     * <p>A {@link org.apache.zookeeper.KeeperException.NoNodeException NoNode}
-     * {@link ResourceException} will be thrown if the node does not exists.
-     *
-     * <p>A {@link org.apache.zookeeper.KeeperException.NotEmptyException NotEmpty}
-     * {@link ResourceException} will be thrown if the node has children.
      *
      * <p>This operation, if successful, will trigger all watches left on this node for the
      * event type {@link org.apache.zookeeper.Watcher.Event.EventType#NodeDeleted NodeDeleted}
@@ -192,8 +156,8 @@ public interface ZooKeeperConnection extends Closeable {
      * </pre>
      *
      * @param path the path of the node to be deleted
-     * @throws ResourceException if the server returns a non-zero error code
-     * or the operation has been interrupted
+     * @throws javax.resource.spi.EISSystemException if the server returns a non-zero error code
+     * @throws javax.resource.spi.CommException if the operation was interrupted
      * @throws IllegalArgumentException if an invalid path is specified
      * @see #delete(String, int)
      */
@@ -204,16 +168,6 @@ public interface ZooKeeperConnection extends Closeable {
      * and the given {@code version} matches the node's version (if given version is {@code -1},
      * it matches any node's version.
      *
-     * <p>A {@link org.apache.zookeeper.KeeperException.NoNodeException NoNode}
-     * {@link ResourceException} will be thrown if the node does not exists.
-     *
-     * <p>A {@link org.apache.zookeeper.KeeperException.BadVersionException BadVersion}
-     * {@link ResourceException} will be thrown if the given {@code version} does not match
-     * the node's version.
-     *
-     * <p>A {@link org.apache.zookeeper.KeeperException.NotEmptyException NotEmpty}
-     * {@link ResourceException} will be thrown if the node has children.
-     *
      * <p>This operation, if successful, will trigger all watches left on this node for the
      * event type {@link org.apache.zookeeper.Watcher.Event.EventType#NodeDeleted NodeDeleted}
      * and the watches left on the parent node of the this node for the event type
@@ -221,8 +175,8 @@ public interface ZooKeeperConnection extends Closeable {
      *
      * @param path the path of the node to be deleted
      * @param version the expected node version
-     * @throws ResourceException if the server returns an error with a non-zero error code
-     * or the operation has been interrupted
+     * @throws javax.resource.spi.EISSystemException if the server returns an error with a non-zero error code
+     * @throws javax.resource.spi.CommException if the operation was interrupted
      * @throws IllegalArgumentException if an invalid path is specified
      */
     void delete(String path, int version) throws ResourceException;
@@ -233,8 +187,8 @@ public interface ZooKeeperConnection extends Closeable {
      *
      * @param path the node path
      * @return the stat of the node of the given path or {@code null} if no such a node exists
-     * @throws ResourceException if the server returns an error with a non-zero error code
-     * or the operation has been interrupted
+     * @throws javax.resource.spi.EISSystemException if the server returns a non-zero error code
+     * @throws javax.resource.spi.CommException if the operation was interrupted
      * @throws IllegalArgumentException if an invalid path is specified
      */
     Stat exists(String path) throws ResourceException;
@@ -247,13 +201,10 @@ public interface ZooKeeperConnection extends Closeable {
      *     exists(path, null);
      * </pre>
      *
-     * <p>A {@link org.apache.zookeeper.KeeperException.NoNodeException NoNode}
-     * {@link ResourceException} will be thrown if no node with the given path exists.
-     *
      * @param path the given path for the node
      * @return the ACL array of the given node
-     * @throws ResourceException if the server returns an error with a non-zero error code
-     * or the operation has been interrupted
+     * @throws javax.resource.spi.EISSystemException if the server returns a non-zero error code
+     * @throws javax.resource.spi.CommException if the operation was interrupted
      * @throws IllegalArgumentException if an invalid path is specified
      * @see #getACL(String, Stat)
      */
@@ -262,14 +213,11 @@ public interface ZooKeeperConnection extends Closeable {
     /**
      * Returns the {@code ACL} and {@code stat} of the node of the given {@code path}.
      *
-     * <p>A {@link org.apache.zookeeper.KeeperException.NoNodeException NoNode}
-     * {@link ResourceException} will be thrown if no node with the given path exists.
-     *
      * @param path the given path for the node
      * @param stat the stat of the node wil be copied to this parameter if not {@code null}
      * @return the ACL array of the given node
-     * @throws ResourceException if the server returns an error with non-zero error code
-     * or the operation has been interrupted
+     * @throws javax.resource.spi.EISSystemException if the server returns a non-zero error code
+     * @throws javax.resource.spi.CommException if the operation was interrupted
      * @throws IllegalArgumentException if an invalid path is specified
      */
     List<ACL> getACL(String path, Stat stat) throws ResourceException;
@@ -279,8 +227,8 @@ public interface ZooKeeperConnection extends Closeable {
      *
      * @param path the given path for the node
      * @return the number of the children nodes
-     * @throws ResourceException if the server returns an error with non-zero error code
-     * or the operation has been interrupted
+     * @throws javax.resource.spi.EISSystemException if the server returns a non-zero error code
+     * @throws javax.resource.spi.CommException if the operation was interrupted
      * @throws IllegalArgumentException if an invalid path is specified
      */
     int getAllChildrenNumber(String path) throws ResourceException;
@@ -291,13 +239,10 @@ public interface ZooKeeperConnection extends Closeable {
      * <p>The list of children returned is not sorted and no guarantee is a provided
      * as to its natural or lexical order.
      *
-     * <p>A {@link org.apache.zookeeper.KeeperException.NoNodeException NoNode}
-     * {@link ResourceException} will be thrown if no node with the given path exists.
-     *
      * @param path the given path for the node
      * @return an unordered list of children of the node with the given path
-     * @throws ResourceException if the server returns an error with non-zero error code
-     * or the operation has been interrupted
+     * @throws javax.resource.spi.EISSystemException if the server returns a non-zero error code
+     * @throws javax.resource.spi.CommException if the operation was interrupted
      * @throws IllegalArgumentException if an invalid path is specified
      */
     List<String> getChildren(String path) throws ResourceException;
@@ -308,23 +253,17 @@ public interface ZooKeeperConnection extends Closeable {
      * <p>The list of children returned is not sorted and no guarantee is a provided
      * as to its natural or lexical order.
      *
-     * <p>A {@link org.apache.zookeeper.KeeperException.NoNodeException NoNode}
-     * {@link ResourceException} will be thrown if no node with the given path exists.
-     *
      * @param path the given path for the node
      * @param stat stat of the node designated by path
      * @return an unordered list of children of the node with the given path
-     * @throws ResourceException if the server returns an error with non-zero error code
-     * or the operation has been interrupted
+     * @throws javax.resource.spi.EISSystemException if the server returns a non-zero error code
+     * @throws javax.resource.spi.CommException if the operation was interrupted
      * @throws IllegalArgumentException if an invalid path is specified
      */
     List<String> getChildren(String path, Stat stat) throws ResourceException;
 
     /**
      * Returns the data of the node of the given path.
-     *
-     * <p>A {@link org.apache.zookeeper.KeeperException.NoNodeException NoNode}
-     * {@link ResourceException} will be thrown if no node with the given path exists.
      *
      * <p>This method is same as:
      * <pre>
@@ -333,8 +272,8 @@ public interface ZooKeeperConnection extends Closeable {
      *
      * @param path the given path for the node
      * @return the data of the node
-     * @throws ResourceException if the server returns an error with non-zero error code
-     * or the operation has been interrupted
+     * @throws javax.resource.spi.EISSystemException if the server returns a non-zero error code
+     * @throws javax.resource.spi.CommException if the operation was interrupted
      * @throws IllegalArgumentException if an invalid path is specified
      * @see #getData(String, Stat)
      */
@@ -343,14 +282,11 @@ public interface ZooKeeperConnection extends Closeable {
     /**
      * Returns the data and the stat of the node of the given path.
      *
-     * <p>A {@link org.apache.zookeeper.KeeperException.NoNodeException NoNode}
-     * {@link ResourceException} will be thrown if no node with the given path exists.
-     *
      * @param path the given path for the node
      * @param stat stat of the node designated by path
      * @return the data of the node
-     * @throws ResourceException if the server returns an error with non-zero error code
-     * or the operation has been interrupted
+     * @throws javax.resource.spi.EISSystemException if the server returns a non-zero error code
+     * @throws javax.resource.spi.CommException if the operation was interrupted
      * @throws IllegalArgumentException if an invalid path is specified
      */
     byte[] getData(String path, Stat stat) throws  ResourceException;
@@ -359,8 +295,8 @@ public interface ZooKeeperConnection extends Closeable {
      * Synchronously returns all the ephemeral nodes created by this session.
      *
      * @return a list of the all the ephemeral nodes created by this session
-     * @throws ResourceException if the server returns an error with non-zero error code
-     * or the operation has been interrupted
+     * @throws javax.resource.spi.EISSystemException if the server returns a non-zero error code
+     * @throws javax.resource.spi.CommException if the operation was interrupted
      */
     List<String> getEphemerals() throws ResourceException;
 
@@ -371,17 +307,14 @@ public interface ZooKeeperConnection extends Closeable {
      *
      * @param prefixPath the prefix path the nodes starts with
      * @return a list of the ephemeral nodes matching the given prefix path
-     * @throws ResourceException if the server returns an error with non-zero error code
-     * or the operation has been interrupted
-     * @throws IllegalArgumentException if an invalid path is specified
+     * @throws javax.resource.spi.EISSystemException if the server returns a non-zero error code
+     * @throws javax.resource.spi.CommException if the operation was interrupted
+     * @throws IllegalArgumentException if an invalid prefix path is specified
      */
     List<String> getEphemerals(String prefixPath) throws ResourceException;
 
     /**
      * Set the {@code ACL} for the node of the given {@code path} if such a node exists.
-     *
-     * <p>A {@link org.apache.zookeeper.KeeperException.NoNodeException NoNode}
-     * {@link ResourceException} will be thrown if no node with the given path exists.
      *
      * <p>This method is same as:
      * <pre>
@@ -391,8 +324,8 @@ public interface ZooKeeperConnection extends Closeable {
      * @param path the given path for the node
      * @param acl the given acl for the node
      * @return the state of the node
-     * @throws ResourceException if the server returns an error with non-zero error code
-     * or the operation has been interrupted
+     * @throws javax.resource.spi.EISSystemException if the server returns a non-zero error code
+     * @throws javax.resource.spi.CommException if the operation was interrupted
      * @throws IllegalArgumentException if an invalid path is specified
      * @see #setACL(String, List, int)
      */
@@ -402,28 +335,18 @@ public interface ZooKeeperConnection extends Closeable {
      * Set the {@code ACL} for the node of the given {@code path} if such a node
      * exists and the given {@code version} matches the acl version of the node.
      *
-     * <p>A {@link org.apache.zookeeper.KeeperException.NoNodeException NoNode}
-     * {@link ResourceException} will be thrown if no node with the given path exists.
-     *
-     * <p>A {@link org.apache.zookeeper.KeeperException.BadVersionException BadVersion}
-     * {@link ResourceException} will be thrown if the given {@code version} does not
-     * match the acl version of the node.
-     *
      * @param path the given path for the node
      * @param acl the given acl for the node
      * @param version the given acl version of the node
      * @return the state of the node
-     * @throws ResourceException if the server returns an error with non-zero error code
-     * or thr operation has been interrupted
+     * @throws javax.resource.spi.EISSystemException if the server returns a non-zero error code
+     * @throws javax.resource.spi.CommException if the operation was interrupted
      * @throws IllegalArgumentException if an invalid path is specified
      */
     Stat setACL(String path, List<ACL> acl, int version) throws ResourceException;
 
     /**
      * Sets the {@code data} for the node of the given {@code path} if such a node exists.
-     *
-     * <p>A {@link org.apache.zookeeper.KeeperException.NoNodeException NoNode}
-     * {@link ResourceException} will be thrown if no node with the given path exists.
      *
      * <p>The maximum allowable size of the {@code data} array is {@code 1} MB
      * ({@code 1 048 576} bytes). Arrays larger than this will cause an error.
@@ -439,8 +362,8 @@ public interface ZooKeeperConnection extends Closeable {
      * @param path the given path for the node
      * @param data the data to be set
      * @return the state of the node
-     * @throws ResourceException if the server returns an error with non-zero error code
-     * or the operation has been interrupted
+     * @throws javax.resource.spi.EISSystemException if the server returns a non-zero error code
+     * @throws javax.resource.spi.CommException if the operation was interrupted
      * @throws IllegalArgumentException if an invalid path is specified
      * @see #setData(String, byte[], int)
      */
@@ -450,13 +373,6 @@ public interface ZooKeeperConnection extends Closeable {
      * Sets the {@code data} for the node of the given {@code path} if such a node
      * exists and the given {@code version} matches the version of the node (if the
      * given version is {@code -1}, it matches any version of the node).
-     *
-     * <p>A {@link org.apache.zookeeper.KeeperException.NoNodeException NoNode}
-     * {@link ResourceException} will be thrown if no node with the given path exists.
-     *
-     * <p>A {@link org.apache.zookeeper.KeeperException.BadVersionException BadVersion}
-     * {@link ResourceException} will be thrown if the given {@code version} does not
-     * match the version of the node.
      *
      * <p>This operation, if successful, will trigger all watches left on this node for the
      * event type {@link org.apache.zookeeper.Watcher.Event.EventType#NodeDataChanged NodeDataChanged}.
@@ -468,8 +384,8 @@ public interface ZooKeeperConnection extends Closeable {
      * @param data the data to be set
      * @param version the expected version
      * @return the state of the node
-     * @throws ResourceException if the server returns an error with non-zero error code
-     * or the operation has been interrupted
+     * @throws javax.resource.spi.EISSystemException if the server returns a non-zero error code
+     * @throws javax.resource.spi.CommException if the operation was interrupted
      * @throws IllegalArgumentException if an invalid path is specified
      */
     Stat setData(String path, byte[] data, int version) throws ResourceException;

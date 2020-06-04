@@ -25,12 +25,16 @@ import org.apache.zookeeper.data.Stat;
 
 import javax.resource.NotSupportedException;
 import javax.resource.ResourceException;
+import javax.resource.spi.CommException;
 import javax.resource.spi.ConnectionEvent;
 import javax.resource.spi.ConnectionEventListener;
 import javax.resource.spi.ConnectionRequestInfo;
+import javax.resource.spi.EISSystemException;
 import javax.resource.spi.LocalTransaction;
 import javax.resource.spi.ManagedConnection;
 import javax.resource.spi.ManagedConnectionMetaData;
+import javax.resource.spi.ResourceAdapterInternalException;
+import javax.resource.spi.UnavailableException;
 import javax.security.auth.Subject;
 import javax.transaction.xa.XAResource;
 import java.io.IOException;
@@ -69,6 +73,15 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
     // by synchronizing access to its list of event listeners
     private final Set<ConnectionEventListener> eventListeners;
 
+    /**
+     * Creates new physical connection to the ZooKeeper server.
+     *
+     * @param managedConnectionFactory the managed connection factory
+     * @param subject caller's security information
+     * @param connectionRequestInfo additional connection request information
+     * @throws ResourceException generic exception
+     * @throws UnavailableException the ZooKeeper server is unavailable
+     */
     public ZooKeeperManagedConnection(ZooKeeperManagedConnectionFactory managedConnectionFactory,
                                       Subject subject,
                                       ConnectionRequestInfo connectionRequestInfo) throws ResourceException {
@@ -82,7 +95,7 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
                                            null,
                                            managedConnectionFactory.isCanBeReadOnly());
         } catch (IOException e) {
-            throw new ResourceException("Unable to create the ZooKeeper client connection", e);
+            throw new UnavailableException("Unable to create the ZooKeeper client connection", e);
         }
     }
 
@@ -113,7 +126,7 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
         try {
             zookeeper.close();
         } catch (InterruptedException e) {
-            throw new ResourceException("Unable to close the ZooKeeper client connection", e);
+            throw new CommException("Unable to close the ZooKeeper client connection", e);
         }
     }
 
@@ -231,7 +244,7 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
         try {
             return zookeeper.create(path, data, acl, createMode);
         } catch (KeeperException | InterruptedException e) {
-            throw new ResourceException("Cannot create node " + path, e);
+            throw resourceException("Cannot create node " + path, e);
         }
     }
 
@@ -243,7 +256,7 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
         try {
             return zookeeper.create(path, data, acl, createMode, stat);
         } catch (KeeperException | InterruptedException e) {
-            throw new ResourceException("Cannot create node " + path, e);
+            throw resourceException("Cannot create node " + path, e);
         }
     }
 
@@ -255,7 +268,7 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
         try {
             return zookeeper.create(path, data, acl, createMode, stat, ttl);
         } catch (KeeperException | InterruptedException e) {
-            throw new ResourceException("Cannot create node " + path, e);
+            throw resourceException("Cannot create node " + path, e);
         }
     }
 
@@ -267,7 +280,7 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
         try {
             zookeeper.delete(path, -1);
         } catch (KeeperException | InterruptedException e) {
-            throw new ResourceException("Cannot delete node " + path, e);
+            throw resourceException("Cannot delete node " + path, e);
         }
     }
 
@@ -279,7 +292,7 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
         try {
             zookeeper.delete(path, version);
         } catch (KeeperException | InterruptedException e) {
-            throw new ResourceException("Cannot delete node " + path, e);
+            throw resourceException("Cannot delete node " + path, e);
         }
     }
 
@@ -291,7 +304,7 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
         try {
             return zookeeper.exists(path, false);
         } catch (KeeperException | InterruptedException e) {
-            throw new ResourceException("Cannot check if node " + path + " exists", e);
+            throw resourceException("Cannot check if node " + path + " exists", e);
         }
     }
 
@@ -303,7 +316,7 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
         try {
             return zookeeper.getACL(path, null);
         } catch (KeeperException | InterruptedException e) {
-            throw new ResourceException("Cannot get ACL for node " + path, e);
+            throw resourceException("Cannot get ACL for node " + path, e);
         }
     }
 
@@ -315,7 +328,7 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
         try {
             return zookeeper.getACL(path, stat);
         } catch (KeeperException | InterruptedException e) {
-            throw new ResourceException("Cannot get ACL for node " + path, e);
+            throw resourceException("Cannot get ACL for node " + path, e);
         }
     }
 
@@ -327,7 +340,7 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
         try {
             return zookeeper.getAllChildrenNumber(path);
         } catch (KeeperException | InterruptedException e) {
-            throw new ResourceException("Cannot get children number for node " + path, e);
+            throw resourceException("Cannot get children number for node " + path, e);
         }
     }
 
@@ -339,7 +352,7 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
         try {
             return zookeeper.getChildren(path, false);
         } catch (KeeperException | InterruptedException e) {
-            throw new ResourceException("Cannot get children for node " + path, e);
+            throw resourceException("Cannot get children for node " + path, e);
         }
     }
 
@@ -351,7 +364,7 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
         try {
             return zookeeper.getChildren(path, false, stat);
         } catch (KeeperException | InterruptedException e) {
-            throw new ResourceException("Cannot get children for node " + path, e);
+            throw resourceException("Cannot get children for node " + path, e);
         }
     }
 
@@ -363,7 +376,7 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
         try {
             return zookeeper.getData(path, false, null);
         } catch (KeeperException | InterruptedException e) {
-            throw new ResourceException("Cannot get data for node " + path, e);
+            throw resourceException("Cannot get data for node " + path, e);
         }
     }
 
@@ -375,7 +388,7 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
         try {
             return zookeeper.getData(path, false, stat);
         } catch (KeeperException | InterruptedException e) {
-            throw new ResourceException("Cannot get data for node " + path, e);
+            throw resourceException("Cannot get data for node " + path, e);
         }
     }
 
@@ -387,7 +400,7 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
         try {
             return zookeeper.getEphemerals();
         } catch (KeeperException | InterruptedException e) {
-            throw new ResourceException("Cannot get ephemeral nodes for session", e);
+            throw resourceException("Cannot get ephemeral nodes for session " + zookeeper.getSessionId(), e);
         }
     }
 
@@ -399,8 +412,8 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
         try {
             return zookeeper.getEphemerals(prefixPath);
         } catch (KeeperException | InterruptedException e) {
-            throw new ResourceException("Cannot get ephemeral nodes with prefix " +
-                                        prefixPath + " for session", e);
+            throw resourceException("Cannot get ephemeral nodes with prefix " +
+                                    prefixPath + " for session " + zookeeper.getSessionId(), e);
         }
     }
 
@@ -412,7 +425,7 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
         try {
             return zookeeper.setACL(path, acl, -1);
         } catch (KeeperException | InterruptedException e) {
-            throw new ResourceException("Cannot set ACL for node " + path, e);
+            throw resourceException("Cannot set ACL for node " + path, e);
         }
     }
 
@@ -424,7 +437,7 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
         try {
             return zookeeper.setACL(path, acl, version);
         } catch (KeeperException | InterruptedException e) {
-            throw new ResourceException("Cannot set ACL for node " + path, e);
+            throw resourceException("Cannot set ACL for node " + path, e);
         }
     }
 
@@ -436,7 +449,7 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
         try {
             return zookeeper.setData(path, data, -1);
         } catch (KeeperException | InterruptedException e) {
-            throw new ResourceException("Cannot set data for node " + path, e);
+            throw resourceException("Cannot set data for node " + path, e);
         }
     }
 
@@ -448,7 +461,7 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
         try {
             return zookeeper.setData(path, data, version);
         } catch (KeeperException | InterruptedException e) {
-            throw new ResourceException("Cannot set data for node " + path, e);
+            throw resourceException("Cannot set data for node " + path, e);
         }
     }
 
@@ -477,6 +490,43 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
         synchronized (eventListeners) {
             eventListeners.forEach(eventListener -> eventListener.connectionClosed(event));
         }
+    }
+
+    private ResourceException resourceException(String message, Exception e)  {
+        StringBuilder sb = new StringBuilder(message);
+        sb.append(": ");
+        if (e instanceof InterruptedException) {
+            return new CommException(sb.toString() + "operation has been interrupted");
+        }
+        if (e instanceof KeeperException) {
+            switch (((KeeperException) e).code()) {
+                case NONODE:
+                    sb.append("node does not exists");
+                    break;
+                case NODEEXISTS:
+                    sb.append("the node already exists");
+                    break;
+                case NOCHILDRENFOREPHEMERALS:
+                    sb.append("ephemeral nodes may not have children");
+                    break;
+                case INVALIDACL:
+                    sb.append("invalid ACL specified");
+                    break;
+                case BADVERSION:
+                    sb.append("version conflict");
+                    break;
+                case NOTEMPTY:
+                    sb.append("the node has children");
+                    break;
+                default:
+                    // KeeperException message
+                    sb.append(e.getMessage());
+                    break;
+            }
+            return new EISSystemException(sb.toString(), e);
+        }
+        // should never go this
+        return new ResourceAdapterInternalException(message, e);
     }
 
 }

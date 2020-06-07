@@ -40,6 +40,22 @@ public class ZooKeeperWork implements Work {
 
     private static final Logger logger = Logger.getLogger(ZooKeeperWork.class.getName());
 
+    private static final ClassValue<Method> methodCache = new ClassValue<Method>() {
+        @Override
+        protected Method computeValue(Class<?> type) {
+            Method method = null;
+            for (Method m : type.getMethods()) {
+                if (m.isAnnotationPresent(OnZooKeeperEvent.class) &&
+                    m.getParameterCount() == 1 &&
+                    m.getParameterTypes()[0] == WatchedEvent.class) {
+                    method = m;
+                    break;
+                }
+            }
+            return method;
+        }
+    };
+
     private final WatchedEvent event;
     private final MessageEndpointFactory endpointFactory;
     private MessageEndpoint endpoint;
@@ -58,14 +74,7 @@ public class ZooKeeperWork implements Work {
     @Override
     public void run() {
         try {
-            Method method = null;
-            for (Method m : endpointFactory.getEndpointClass().getMethods()) {
-                if (m.isAnnotationPresent(OnZooKeeperEvent.class) &&
-                        m.getParameterCount() == 1 && m.getParameterTypes()[0] == WatchedEvent.class) {
-                    method = m;
-                    break;
-                }
-            }
+            Method method = methodCache.get(endpointFactory.getEndpointClass());
             if (method != null) {
                 endpoint = endpointFactory.createEndpoint(null);
                 endpoint.beforeDelivery(method);

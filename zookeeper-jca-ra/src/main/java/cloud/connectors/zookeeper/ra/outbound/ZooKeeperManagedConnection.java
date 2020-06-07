@@ -151,7 +151,7 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
             ZooKeeperConnectionImpl handle = (ZooKeeperConnectionImpl) connection;
             ZooKeeperManagedConnection managedConnection = handle.getManagedConnection();
             if (managedConnection != null) {
-                managedConnection.disassociateConnection(handle);
+                managedConnection.dissociateConnection(handle);
             }
             // activates the connection with this managed connection
             handle.setManagedConnection(this);
@@ -161,10 +161,10 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
     }
 
     /**
-     * Disassociates the current application level connection handle from
+     * Dissociates the current application level connection handle from
      * this managed connection.
      */
-    void disassociateConnection(ZooKeeperConnectionImpl connection) {
+    void dissociateConnection(ZooKeeperConnectionImpl connection) {
         connectionHandles.remove(connection);
     }
 

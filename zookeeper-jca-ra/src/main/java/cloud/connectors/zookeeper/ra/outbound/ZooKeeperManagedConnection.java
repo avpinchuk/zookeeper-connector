@@ -39,9 +39,9 @@ import javax.security.auth.Subject;
 import javax.transaction.xa.XAResource;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -63,7 +63,7 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
     private final ConnectionRequestInfo connectionRequestInfo;
     private final ZooKeeper zookeeper;
     private PrintWriter logWriter;
-    private ZooKeeperConnectionImpl connectionHandle;
+    private final Set<ZooKeeperConnectionImpl> connectionHandles;
     // We doesn't work with this set directly.
     // They managed by the application server.
     // Since an application server may modify the list of
@@ -87,7 +87,8 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
                                       ConnectionRequestInfo connectionRequestInfo) throws ResourceException {
         this.subject = subject;
         this.connectionRequestInfo = connectionRequestInfo;
-        this.eventListeners = new HashSet<>();
+        this.connectionHandles = new CopyOnWriteArraySet<>();
+        this.eventListeners = new CopyOnWriteArraySet<>();
 
         try {
             this.zookeeper = new ZooKeeper(managedConnectionFactory.getConnectString(),
@@ -107,14 +108,13 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
      */
     @Override
     public Object getConnection(Subject subject, ConnectionRequestInfo connectionRequestInfo) throws ResourceException {
-        // disassociates the current application level
-        // connection handle from this managed connection
-        if (connectionHandle != null) {
-            connectionHandle.setManagedConnection(null);
-        }
+        // inactivate the current application level
+        // connection handles from this managed connection
+        connectionHandles.forEach(handle -> handle.setManagedConnection(null));
         // create new application level connection handle and
         // associate it with this managed connection
-        connectionHandle = new ZooKeeperConnectionImpl(this);
+        ZooKeeperConnectionImpl connectionHandle = new ZooKeeperConnectionImpl(this);
+        connectionHandles.add(connectionHandle);
         return connectionHandle;
     }
 
@@ -132,12 +132,11 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
 
     /**
      * {@inheritDoc}
-     *
-     * <p>Invokes during close application level handle phase.
      */
     @Override
     public void cleanup() throws ResourceException {
-        disassociateConnection();
+        connectionHandles.forEach(handle -> handle.setManagedConnection(null));
+        connectionHandles.clear();
     }
 
     /**
@@ -146,21 +145,18 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
     @Override
     public void associateConnection(Object connection) throws ResourceException {
         if (connection instanceof ZooKeeperConnectionImpl) {
-            // disassociates this managed connection from current
-            // application level connection handle
-            connectionHandle.setManagedConnection(null);
+            // inactivate all connection handles
+            connectionHandles.forEach(handle -> handle.setManagedConnection(null));
+            // disassociates the connection from its current managed connection
             ZooKeeperConnectionImpl handle = (ZooKeeperConnectionImpl) connection;
             ZooKeeperManagedConnection managedConnection = handle.getManagedConnection();
             if (managedConnection != null) {
-                // disassociates the new handle's
-                // managed connection from its handle
-                managedConnection.disassociateConnection();
+                managedConnection.disassociateConnection(handle);
             }
-            // associates the new handle with this
-            // managed connection
+            // activates the connection with this managed connection
             handle.setManagedConnection(this);
-            // associates this managed connection with new handle
-            connectionHandle = handle;
+            // associates the connection with this managed connection
+            connectionHandles.add(handle);
         }
     }
 
@@ -168,8 +164,8 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
      * Disassociates the current application level connection handle from
      * this managed connection.
      */
-    void disassociateConnection() {
-        connectionHandle = null;
+    void disassociateConnection(ZooKeeperConnectionImpl connection) {
+        connectionHandles.remove(connection);
     }
 
     /**
@@ -177,9 +173,7 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
      */
     @Override
     public void addConnectionEventListener(ConnectionEventListener connectionEventListener) {
-        synchronized (eventListeners) {
-            eventListeners.add(connectionEventListener);
-        }
+        eventListeners.add(connectionEventListener);
     }
 
     /**
@@ -187,9 +181,7 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
      */
     @Override
     public void removeConnectionEventListener(ConnectionEventListener connectionEventListener) {
-        synchronized (eventListeners) {
-            eventListeners.remove(connectionEventListener);
-        }
+        eventListeners.remove(connectionEventListener);
     }
 
     /**
@@ -484,12 +476,11 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
      *
      * @param handle the application level connection handle
      */
-    void closeHandle(ZooKeeperConnection handle) {
+    void closeHandle(ZooKeeperConnectionImpl handle) {
+        connectionHandles.remove(handle);
         ConnectionEvent event = new ConnectionEvent(this, ConnectionEvent.CONNECTION_CLOSED);
         event.setConnectionHandle(handle);
-        synchronized (eventListeners) {
-            eventListeners.forEach(eventListener -> eventListener.connectionClosed(event));
-        }
+        eventListeners.forEach(eventListener -> eventListener.connectionClosed(event));
     }
 
     private ResourceException resourceException(String message, Exception e)  {

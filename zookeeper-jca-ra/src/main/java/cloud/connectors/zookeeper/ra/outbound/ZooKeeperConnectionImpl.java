@@ -34,38 +34,17 @@ import java.util.List;
  * instance.
  *
  * <p>All methods of this class will throw an {@link IllegalStateException} when invoked
- * for closed or disassociated connection handle.
+ * for closed or inactive connection handle.
  *
  * @author alexa
  * @see cloud.connectors.zookeeper.api.ZooKeeperConnectionFactory ZooKeeperConnectionFactory
  */
 public class ZooKeeperConnectionImpl implements ZooKeeperConnection {
 
-    private enum State {
-        /**
-         * Handle is associated with a managed connection.
-         */
-        ACTIVE,
-        /**
-         * Handle is valid but is a disassociated from
-         * managed connection.
-         */
-        INACTIVE,
-        /**
-         * Handle is a closed and must not be used.
-         */
-        CLOSED
-    }
-
     /**
      * The managed connection represents actual physical connection.
      */
     private ZooKeeperManagedConnection managedConnection;
-
-    /**
-     * The application level connection state.
-     */
-    private State state;
 
     /**
      * Creates an application level connection handle instance. Must not be used directly.
@@ -75,7 +54,6 @@ public class ZooKeeperConnectionImpl implements ZooKeeperConnection {
     public ZooKeeperConnectionImpl(ZooKeeperManagedConnection managedConnection) {
         // associates this handle with the managed connection
         this.managedConnection = managedConnection;
-        this.state = State.ACTIVE;
     }
 
     /**
@@ -254,10 +232,8 @@ public class ZooKeeperConnectionImpl implements ZooKeeperConnection {
      */
     @Override
     public void close() {
-        state = State.CLOSED;
         managedConnection.closeHandle(this);
-        // disassociate the managed connection
-        // from this handle
+        // disassociate the managed connection from this handle
         managedConnection = null;
     }
 
@@ -278,27 +254,19 @@ public class ZooKeeperConnectionImpl implements ZooKeeperConnection {
      * @param managedConnection the underlying physical connection
      */
     void setManagedConnection(ZooKeeperManagedConnection managedConnection) {
-        state = managedConnection == null ? State.INACTIVE : State.ACTIVE;
-        // associates the given managed connection
-        // with this handle
+        // associates the given managed connection with this handle
         this.managedConnection = managedConnection;
     }
 
     /**
      * Checks the state of this connection handle. Client can use this handle
-     * only in active state.
+     * only when its associated with a managed connection.
      *
      * @throws IllegalStateException if this handle is inactive or closed
      */
     private void checkState() throws IllegalStateException {
-        switch (state) {
-            case INACTIVE:
-                throw new IllegalStateException("Cannot perform operation on an inactive connection handle");
-            case CLOSED:
-                throw new IllegalStateException("Cannot perform operation on a closed connection handle");
-            case ACTIVE:
-            default:
-                break;
+        if (managedConnection == null) {
+            throw new IllegalStateException("Cannot perform operation on an inactive or closed connection handle");
         }
     }
 

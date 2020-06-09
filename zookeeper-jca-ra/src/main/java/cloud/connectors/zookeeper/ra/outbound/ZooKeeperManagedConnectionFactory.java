@@ -95,6 +95,8 @@ public class ZooKeeperManagedConnectionFactory implements ManagedConnectionFacto
      */
     private ResourceAdapter resourceAdapter;
 
+    private ConnectionManager connectionManager;
+
     /**
      * Get the {@code connectString}.
      *
@@ -156,6 +158,7 @@ public class ZooKeeperManagedConnectionFactory implements ManagedConnectionFacto
      */
     @Override
     public Object createConnectionFactory(ConnectionManager connectionManager) throws ResourceException {
+        this.connectionManager = connectionManager;
         return new ZooKeeperConnectionFactoryImpl(this, connectionManager);
     }
 
@@ -178,7 +181,7 @@ public class ZooKeeperManagedConnectionFactory implements ManagedConnectionFacto
      */
     @Override
     public ManagedConnection createManagedConnection(Subject subject, ConnectionRequestInfo connectionRequestInfo) throws ResourceException {
-        return new ZooKeeperManagedConnection(this, subject, connectionRequestInfo);
+        return new ZooKeeperManagedConnection(this, connectionManager, subject, connectionRequestInfo);
     }
 
     /**

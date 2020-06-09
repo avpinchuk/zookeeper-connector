@@ -28,7 +28,9 @@ import javax.resource.ResourceException;
 import javax.resource.spi.CommException;
 import javax.resource.spi.ConnectionEvent;
 import javax.resource.spi.ConnectionEventListener;
+import javax.resource.spi.ConnectionManager;
 import javax.resource.spi.ConnectionRequestInfo;
+import javax.resource.spi.DissociatableManagedConnection;
 import javax.resource.spi.EISSystemException;
 import javax.resource.spi.LocalTransaction;
 import javax.resource.spi.ManagedConnection;
@@ -53,7 +55,7 @@ import java.util.logging.Logger;
  * @author alexa
  */
 @SuppressWarnings("RedundantThrows")
-public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperConnection {
+public class ZooKeeperManagedConnection implements ManagedConnection, DissociatableManagedConnection, ZooKeeperConnection {
 
     private static final Logger logger = Logger.getLogger(ZooKeeperManagedConnection.class.getName());
 
@@ -62,6 +64,8 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
     @SuppressWarnings({"FieldCanBeLocal", "unused"})
     private final ConnectionRequestInfo connectionRequestInfo;
     private final ZooKeeper zookeeper;
+    private final ZooKeeperManagedConnectionFactory managedConnectionFactory;
+    private final ConnectionManager connectionManager;
     private PrintWriter logWriter;
     private final Set<ZooKeeperConnectionImpl> connectionHandles;
     // We doesn't work with this set directly.
@@ -77,14 +81,18 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
      * Creates new physical connection to the ZooKeeper server.
      *
      * @param managedConnectionFactory the managed connection factory
+     * @param connectionManager the connection manager
      * @param subject caller's security information
      * @param connectionRequestInfo additional connection request information
      * @throws ResourceException generic exception
      * @throws UnavailableException the ZooKeeper server is unavailable
      */
     public ZooKeeperManagedConnection(ZooKeeperManagedConnectionFactory managedConnectionFactory,
+                                      ConnectionManager connectionManager,
                                       Subject subject,
                                       ConnectionRequestInfo connectionRequestInfo) throws ResourceException {
+        this.managedConnectionFactory = managedConnectionFactory;
+        this.connectionManager = connectionManager;
         this.subject = subject;
         this.connectionRequestInfo = connectionRequestInfo;
         this.connectionHandles = new CopyOnWriteArraySet<>();
@@ -113,7 +121,10 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
         connectionHandles.forEach(handle -> handle.setManagedConnection(null));
         // create new application level connection handle and
         // associate it with this managed connection
-        ZooKeeperConnectionImpl connectionHandle = new ZooKeeperConnectionImpl(this);
+        ZooKeeperConnectionImpl connectionHandle = new ZooKeeperConnectionImpl(this,
+                                                                               managedConnectionFactory,
+                                                                               connectionManager,
+                                                                               connectionRequestInfo);
         connectionHandles.add(connectionHandle);
         return connectionHandle;
     }
@@ -135,8 +146,7 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
      */
     @Override
     public void cleanup() throws ResourceException {
-        connectionHandles.forEach(handle -> handle.setManagedConnection(null));
-        connectionHandles.clear();
+        dissociateConnections();
     }
 
     /**
@@ -151,7 +161,7 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
             ZooKeeperConnectionImpl handle = (ZooKeeperConnectionImpl) connection;
             ZooKeeperManagedConnection managedConnection = handle.getManagedConnection();
             if (managedConnection != null) {
-                managedConnection.disassociateConnection(handle);
+                managedConnection.dissociateConnection(handle);
             }
             // activates the connection with this managed connection
             handle.setManagedConnection(this);
@@ -161,11 +171,23 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
     }
 
     /**
-     * Disassociates the current application level connection handle from
-     * this managed connection.
+     * {@inheritDoc}
      */
-    void disassociateConnection(ZooKeeperConnectionImpl connection) {
+    @Override
+    public void dissociateConnections() throws ResourceException {
+        connectionHandles.forEach(handle -> handle.setManagedConnection(null));
+        connectionHandles.clear();
+    }
+
+    /**
+     * Dissociates the current application level connection handle from
+     * this managed connection.
+     *
+     * @param connection the application level connection handle
+     */
+    void dissociateConnection(ZooKeeperConnectionImpl connection) {
         connectionHandles.remove(connection);
+        connection.setManagedConnection(null);
     }
 
     /**
@@ -477,10 +499,12 @@ public class ZooKeeperManagedConnection implements ManagedConnection, ZooKeeperC
      * @param handle the application level connection handle
      */
     void closeHandle(ZooKeeperConnectionImpl handle) {
-        connectionHandles.remove(handle);
+        // send CONNECTION_CLOSED event to appserver
         ConnectionEvent event = new ConnectionEvent(this, ConnectionEvent.CONNECTION_CLOSED);
         event.setConnectionHandle(handle);
         eventListeners.forEach(eventListener -> eventListener.connectionClosed(event));
+        // dissociate handle
+        dissociateConnection(handle);
     }
 
     private ResourceException resourceException(String message, Exception e)  {

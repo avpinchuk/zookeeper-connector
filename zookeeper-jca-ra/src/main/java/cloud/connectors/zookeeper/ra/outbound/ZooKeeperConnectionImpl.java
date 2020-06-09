@@ -22,7 +22,10 @@ import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
 
 import javax.resource.ResourceException;
+import javax.resource.spi.ConnectionManager;
+import javax.resource.spi.ConnectionRequestInfo;
 import javax.resource.spi.IllegalStateException;
+import javax.resource.spi.LazyAssociatableConnectionManager;
 import java.util.List;
 
 /**
@@ -45,15 +48,30 @@ public class ZooKeeperConnectionImpl implements ZooKeeperConnection {
      * The managed connection represents actual physical connection.
      */
     private ZooKeeperManagedConnection managedConnection;
+    private final ZooKeeperManagedConnectionFactory connectionFactory;
+    private final ConnectionManager connectionManager;
+    private final ConnectionRequestInfo requestInfo;
+
+    private boolean closed;
 
     /**
      * Creates an application level connection handle instance. Must not be used directly.
      *
      * @param managedConnection the associated physical connection
+     * @param connectionFactory the managed connection factory
+     * @param connectionManager the connection manager
+     * @param requestInfo the connection request info
      */
-    public ZooKeeperConnectionImpl(ZooKeeperManagedConnection managedConnection) {
+    public ZooKeeperConnectionImpl(ZooKeeperManagedConnection managedConnection,
+                                   ZooKeeperManagedConnectionFactory connectionFactory,
+                                   ConnectionManager connectionManager,
+                                   ConnectionRequestInfo requestInfo) {
         // associates this handle with the managed connection
         this.managedConnection = managedConnection;
+        this.connectionFactory = connectionFactory;
+        this.connectionManager = connectionManager;
+        this.requestInfo = requestInfo;
+        this.closed = false;
     }
 
     /**
@@ -62,6 +80,9 @@ public class ZooKeeperConnectionImpl implements ZooKeeperConnection {
     @Override
     public String create(String path, byte[] data, List<ACL> acl, CreateMode createMode) throws ResourceException {
         checkState();
+        if (managedConnection == null) {
+            associateConnection();
+        }
         return managedConnection.create(path, data, acl, createMode);
     }
 
@@ -71,6 +92,9 @@ public class ZooKeeperConnectionImpl implements ZooKeeperConnection {
     @Override
     public String create(String path, byte[] data, List<ACL> acl, CreateMode createMode, Stat stat) throws ResourceException {
         checkState();
+        if (managedConnection == null) {
+            associateConnection();
+        }
         return managedConnection.create(path, data, acl, createMode, stat);
     }
 
@@ -80,6 +104,9 @@ public class ZooKeeperConnectionImpl implements ZooKeeperConnection {
     @Override
     public String create(String path, byte[] data, List<ACL> acl, CreateMode createMode, Stat stat, long ttl) throws ResourceException {
         checkState();
+        if (managedConnection == null) {
+            associateConnection();
+        }
         return managedConnection.create(path, data, acl, createMode, stat, ttl);
     }
 
@@ -89,6 +116,9 @@ public class ZooKeeperConnectionImpl implements ZooKeeperConnection {
     @Override
     public void delete(String path) throws ResourceException {
         checkState();
+        if (managedConnection == null) {
+            associateConnection();
+        }
         managedConnection.delete(path);
     }
 
@@ -98,6 +128,9 @@ public class ZooKeeperConnectionImpl implements ZooKeeperConnection {
     @Override
     public void delete(String path, int version) throws ResourceException {
         checkState();
+        if (managedConnection == null) {
+            associateConnection();
+        }
         managedConnection.delete(path, version);
     }
 
@@ -107,6 +140,9 @@ public class ZooKeeperConnectionImpl implements ZooKeeperConnection {
     @Override
     public Stat exists(String path) throws ResourceException {
         checkState();
+        if (managedConnection == null) {
+            associateConnection();
+        }
         return managedConnection.exists(path);
     }
 
@@ -116,6 +152,9 @@ public class ZooKeeperConnectionImpl implements ZooKeeperConnection {
     @Override
     public List<ACL> getACL(String path) throws ResourceException {
         checkState();
+        if (managedConnection == null) {
+            associateConnection();
+        }
         return managedConnection.getACL(path);
     }
 
@@ -125,6 +164,9 @@ public class ZooKeeperConnectionImpl implements ZooKeeperConnection {
     @Override
     public List<ACL> getACL(String path, Stat stat) throws ResourceException {
         checkState();
+        if (managedConnection == null) {
+            associateConnection();
+        }
         return managedConnection.getACL(path, stat);
     }
 
@@ -134,6 +176,9 @@ public class ZooKeeperConnectionImpl implements ZooKeeperConnection {
     @Override
     public int getAllChildrenNumber(String path) throws ResourceException {
         checkState();
+        if (managedConnection == null) {
+            associateConnection();
+        }
         return managedConnection.getAllChildrenNumber(path);
     }
 
@@ -143,6 +188,9 @@ public class ZooKeeperConnectionImpl implements ZooKeeperConnection {
     @Override
     public List<String> getChildren(String path) throws ResourceException {
         checkState();
+        if (managedConnection == null) {
+            associateConnection();
+        }
         return managedConnection.getChildren(path);
     }
 
@@ -152,6 +200,9 @@ public class ZooKeeperConnectionImpl implements ZooKeeperConnection {
     @Override
     public List<String> getChildren(String path, Stat stat) throws ResourceException {
         checkState();
+        if (managedConnection == null) {
+            associateConnection();
+        }
         return managedConnection.getChildren(path, stat);
     }
 
@@ -161,6 +212,9 @@ public class ZooKeeperConnectionImpl implements ZooKeeperConnection {
     @Override
     public byte[] getData(String path) throws ResourceException {
         checkState();
+        if (managedConnection == null) {
+            associateConnection();
+        }
         return managedConnection.getData(path);
     }
 
@@ -170,6 +224,9 @@ public class ZooKeeperConnectionImpl implements ZooKeeperConnection {
     @Override
     public byte[] getData(String path, Stat stat) throws ResourceException {
         checkState();
+        if (managedConnection == null) {
+            associateConnection();
+        }
         return managedConnection.getData(path, stat);
     }
 
@@ -179,6 +236,9 @@ public class ZooKeeperConnectionImpl implements ZooKeeperConnection {
     @Override
     public List<String> getEphemerals() throws ResourceException {
         checkState();
+        if (managedConnection == null) {
+            associateConnection();
+        }
         return managedConnection.getEphemerals();
     }
 
@@ -188,6 +248,9 @@ public class ZooKeeperConnectionImpl implements ZooKeeperConnection {
     @Override
     public List<String> getEphemerals(String prefixPath) throws ResourceException {
         checkState();
+        if (managedConnection == null) {
+            associateConnection();
+        }
         return managedConnection.getEphemerals(prefixPath);
     }
 
@@ -197,6 +260,9 @@ public class ZooKeeperConnectionImpl implements ZooKeeperConnection {
     @Override
     public Stat setACL(String path, List<ACL> acl) throws ResourceException {
         checkState();
+        if (managedConnection == null) {
+            associateConnection();
+        }
         return managedConnection.setACL(path, acl);
     }
 
@@ -206,6 +272,9 @@ public class ZooKeeperConnectionImpl implements ZooKeeperConnection {
     @Override
     public Stat setACL(String path, List<ACL> acl, int version) throws ResourceException {
         checkState();
+        if (managedConnection == null) {
+            associateConnection();
+        }
         return managedConnection.setACL(path, acl, version);
     }
 
@@ -215,6 +284,9 @@ public class ZooKeeperConnectionImpl implements ZooKeeperConnection {
     @Override
     public Stat setData(String path, byte[] data) throws ResourceException {
         checkState();
+        if (managedConnection == null) {
+            associateConnection();
+        }
         return managedConnection.setData(path, data);
     }
 
@@ -224,6 +296,9 @@ public class ZooKeeperConnectionImpl implements ZooKeeperConnection {
     @Override
     public Stat setData(String path, byte[] data, int version) throws ResourceException {
         checkState();
+        if (managedConnection == null) {
+            associateConnection();
+        }
         return managedConnection.setData(path, data, version);
     }
 
@@ -232,9 +307,19 @@ public class ZooKeeperConnectionImpl implements ZooKeeperConnection {
      */
     @Override
     public void close() {
-        managedConnection.closeHandle(this);
-        // disassociate the managed connection from this handle
-        managedConnection = null;
+        if (closed) {
+            return;
+        }
+
+        closed = true;
+        if (managedConnection != null) {
+            managedConnection.closeHandle(this);
+        } else {
+            if (connectionManager instanceof LazyAssociatableConnectionManager) {
+                LazyAssociatableConnectionManager manager = (LazyAssociatableConnectionManager) connectionManager;
+                manager.inactiveConnectionClosed(this, connectionFactory);
+            }
+        }
     }
 
     /**
@@ -265,8 +350,15 @@ public class ZooKeeperConnectionImpl implements ZooKeeperConnection {
      * @throws IllegalStateException if this handle is inactive or closed
      */
     private void checkState() throws IllegalStateException {
-        if (managedConnection == null) {
-            throw new IllegalStateException("Cannot perform operation on an inactive or closed connection handle");
+        if (closed) {
+            throw new IllegalStateException("Cannot perform operation on a closed connection");
+        }
+    }
+
+    private void associateConnection() throws ResourceException {
+        if (connectionManager instanceof LazyAssociatableConnectionManager) {
+            LazyAssociatableConnectionManager manager = (LazyAssociatableConnectionManager) connectionManager;
+            manager.associateConnection(this, connectionFactory, requestInfo);
         }
     }
 

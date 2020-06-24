@@ -1,7 +1,7 @@
 package cloud.connectors.zookeeper.ra.outbound;
 
 import cloud.connectors.zookeeper.ra.ResourceAdapterUtil;
-import org.apache.curator.test.TestingServer;
+import cloud.connectors.zookeeper.ra.ZooKeeperTestingServer;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZKUtil;
@@ -28,13 +28,9 @@ import org.junit.runner.RunWith;
 import javax.ejb.EJB;
 import javax.resource.ResourceException;
 import javax.resource.spi.EISSystemException;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.List;
 
@@ -50,7 +46,7 @@ import static org.junit.Assert.assertThrows;
 @SuppressWarnings("ArquillianTooManyDeployment")
 public class ZooKeeperConnectionTest {
 
-    private static TestingServer zooKeeperServer;
+    private static ZooKeeperTestingServer zooKeeperServer;
 
     private static final long ttl = 50L;
 
@@ -89,30 +85,14 @@ public class ZooKeeperConnectionTest {
     @BeforeClass
     @RunAsClient
     public static void setUpClass() throws Exception {
-        Path tmpPath = Files.createTempDirectory("zookeeper");
-        // register cleanup shutdown hook
-        Runtime.getRuntime().addShutdownHook(
-            new Thread(() -> {
-                try {
-                    Files.walk(tmpPath)
-                         .sorted(Comparator.reverseOrder())
-                         .forEach(path -> {
-                             try {
-                                 Files.delete(path);
-                             } catch (IOException ignore) {}
-                         });
-                } catch (IOException ignore) {}
-            })
-        );
-        zooKeeperServer = new TestingServer(port, tmpPath.toFile());
+        zooKeeperServer = new ZooKeeperTestingServer(port);
+        zooKeeperServer.start();
     }
 
     @AfterClass
     @RunAsClient
     public static void tearDownClass() throws Exception {
-        if (zooKeeperServer != null) {
-            zooKeeperServer.stop();
-        }
+        zooKeeperServer.stop();
     }
 
     @Before

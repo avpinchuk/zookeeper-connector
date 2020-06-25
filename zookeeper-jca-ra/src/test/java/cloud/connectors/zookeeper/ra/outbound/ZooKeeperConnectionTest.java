@@ -7,7 +7,6 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZKUtil;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
-import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.container.test.api.OperateOnDeployment;
@@ -30,7 +29,6 @@ import javax.resource.ResourceException;
 import javax.resource.spi.EISSystemException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 
@@ -55,10 +53,6 @@ public class ZooKeeperConnectionTest {
     private static final int port = 2182;
 
     private static final int sessionTimeout = 3000;
-
-    private static final List<ACL> allAnyoneUnsafe =
-            Collections.singletonList(new ACL(ZooDefs.Perms.ALL, ZooDefs.Ids.ANYONE_ID_UNSAFE));
-
 
     private final List<String> nodes = new ArrayList<>();
 
@@ -102,13 +96,13 @@ public class ZooKeeperConnectionTest {
         switch (testName.getMethodName()) {
             case "testDelete":
                 zooKeeper = new ZooKeeper(connectString, sessionTimeout, null);
-                zooKeeper.create("/node0", "value0".getBytes(), allAnyoneUnsafe, CreateMode.PERSISTENT);
+                zooKeeper.create("/node0", "value0".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
                 zooKeeper.close();
                 break;
             case "testDeleteVersion":
                 zooKeeper = new ZooKeeper(connectString, sessionTimeout, null);
-                zooKeeper.create("/node0", "value0".getBytes(), allAnyoneUnsafe, CreateMode.PERSISTENT);
-                zooKeeper.create("/node1", "value1".getBytes(), allAnyoneUnsafe, CreateMode.PERSISTENT);
+                zooKeeper.create("/node0", "value0".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+                zooKeeper.create("/node1", "value1".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
                 zooKeeper.close();
                 break;
             case "testExists":
@@ -121,16 +115,16 @@ public class ZooKeeperConnectionTest {
             case "testSetData":
             case "testSetDataVersion":
                 zooKeeper = new ZooKeeper(connectString, sessionTimeout, null);
-                nodes.add(zooKeeper.create("/node0", "value0".getBytes(), allAnyoneUnsafe, CreateMode.PERSISTENT));
+                nodes.add(zooKeeper.create("/node0", "value0".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT));
                 zooKeeper.close();
                 break;
             case "testGetAllChildrenNumber":
             case "testGetChildren":
             case "testGetChildrenStat":
                 zooKeeper = new ZooKeeper(connectString, sessionTimeout, null);
-                nodes.add(zooKeeper.create("/node0", "value0".getBytes(), allAnyoneUnsafe, CreateMode.PERSISTENT));
-                zooKeeper.create("/node0/node00", "value00".getBytes(), allAnyoneUnsafe, CreateMode.PERSISTENT);
-                zooKeeper.create("/node0/node01", "value01".getBytes(), allAnyoneUnsafe, CreateMode.PERSISTENT);
+                nodes.add(zooKeeper.create("/node0", "value0".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT));
+                zooKeeper.create("/node0/node00", "value00".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+                zooKeeper.create("/node0/node01", "value01".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
                 zooKeeper.close();
                 break;
             default:
@@ -173,16 +167,16 @@ public class ZooKeeperConnectionTest {
             String path = "/node" + i;
             byte[] data = ("value" + i).getBytes();
 
-            String actualPath = connection.create(path, data, allAnyoneUnsafe, createMode);
+            String actualPath = connection.create(path, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, createMode);
             nodes.add(actualPath);
 
             // NodeExists error code
             if (createMode.isSequential()) {
                 // sequential nodes does not returns NodeExists condition
-                nodes.add(connection.create(path, data, allAnyoneUnsafe, createMode));
+                nodes.add(connection.create(path, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, createMode));
             } else {
                 assertThat(assertThrows(EISSystemException.class,
-                                        () -> connection.create(path, data, allAnyoneUnsafe, createMode)).getCause(),
+                                        () -> connection.create(path, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, createMode)).getCause(),
                            instanceOf(KeeperException.NodeExistsException.class));
             }
 
@@ -190,10 +184,10 @@ public class ZooKeeperConnectionTest {
             if (createMode.isEphemeral()) {
                 // ephemeral nodes cannot contains children
                 assertThat(assertThrows(EISSystemException.class,
-                                        () -> connection.create(actualPath + path, data, allAnyoneUnsafe, createMode)).getCause(),
+                                        () -> connection.create(actualPath + path, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, createMode)).getCause(),
                            instanceOf(KeeperException.NoChildrenForEphemeralsException.class));
             } else {
-                connection.create(actualPath + path, data, allAnyoneUnsafe, createMode);
+                connection.create(actualPath + path, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, createMode);
             }
             i++;
         }
@@ -212,7 +206,7 @@ public class ZooKeeperConnectionTest {
             byte[] data = ("value" + i).getBytes();
 
             ComparableStat stat = new ComparableStat();
-            String actualPath = connection.create(path, data, allAnyoneUnsafe, createMode, stat.stat());
+            String actualPath = connection.create(path, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, createMode, stat.stat());
             nodes.add(actualPath);
             assertThat(emptyStat, lessThan(stat));
 
@@ -220,11 +214,11 @@ public class ZooKeeperConnectionTest {
             ComparableStat stat2 = new ComparableStat();
             if (createMode.isSequential()) {
                 // sequential nodes does not returns NodeExists condition
-                nodes.add(connection.create(path, data, allAnyoneUnsafe, createMode, stat2.stat()));
+                nodes.add(connection.create(path, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, createMode, stat2.stat()));
                 assertThat(stat, lessThan(stat2));
             } else {
                 assertThat(assertThrows(EISSystemException.class,
-                                        () -> connection.create(path, data, allAnyoneUnsafe, createMode, stat2.stat())).getCause(),
+                                        () -> connection.create(path, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, createMode, stat2.stat())).getCause(),
                            instanceOf(KeeperException.NodeExistsException.class));
             }
 
@@ -233,10 +227,10 @@ public class ZooKeeperConnectionTest {
             if (createMode.isEphemeral()) {
                 // ephemeral nodes cannot contains children
                 assertThat(assertThrows(EISSystemException.class,
-                                        () -> connection.create(actualPath + path, data, allAnyoneUnsafe, createMode, stat3.stat())).getCause(),
+                                        () -> connection.create(actualPath + path, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, createMode, stat3.stat())).getCause(),
                            instanceOf(KeeperException.NoChildrenForEphemeralsException.class));
             } else {
-                connection.create(actualPath + path, data, allAnyoneUnsafe, createMode, stat3.stat());
+                connection.create(actualPath + path, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, createMode, stat3.stat());
                 assertThat(stat2, lessThan(stat3));
             }
             i++;
@@ -258,16 +252,16 @@ public class ZooKeeperConnectionTest {
             byte[] data = ("value" + i).getBytes();
 
             ComparableStat stat = new ComparableStat();
-            nodes.add(connection.create(path, data, allAnyoneUnsafe, createMode, stat.stat(), ttl));
+            nodes.add(connection.create(path, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, createMode, stat.stat(), ttl));
             assertThat(emptyStat, lessThan(stat));
 
             ComparableStat stat2 = new ComparableStat();
             if (createMode.isSequential()) {
-                nodes.add(connection.create(path, data, allAnyoneUnsafe, createMode, stat2.stat(), ttl));
+                nodes.add(connection.create(path, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, createMode, stat2.stat(), ttl));
                 assertThat(stat, lessThan(stat2));
             } else {
                 assertThat(assertThrows(EISSystemException.class,
-                                        () -> connection.create(path, data, allAnyoneUnsafe, createMode, stat2.stat(), ttl)).getCause(),
+                                        () -> connection.create(path, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, createMode, stat2.stat(), ttl)).getCause(),
                            instanceOf(KeeperException.NodeExistsException.class));
             }
             i++;
@@ -311,7 +305,7 @@ public class ZooKeeperConnectionTest {
     @Test
     @OperateOnDeployment("test")
     public void testGetACL() throws ResourceException {
-        assertThat(connection.getACL("/node0"), is(allAnyoneUnsafe));
+        assertThat(connection.getACL("/node0"), is(ZooDefs.Ids.OPEN_ACL_UNSAFE));
         assertThat(assertThrows(EISSystemException.class,
                                 () -> connection.getACL("/node1")).getCause(),
                    instanceOf(KeeperException.NoNodeException.class));
@@ -321,7 +315,7 @@ public class ZooKeeperConnectionTest {
     @OperateOnDeployment("test")
     public void testGetACLStat() throws ResourceException {
         ComparableStat stat = new ComparableStat();
-        assertThat(connection.getACL("/node0", stat.stat()), is(allAnyoneUnsafe));
+        assertThat(connection.getACL("/node0", stat.stat()), is(ZooDefs.Ids.OPEN_ACL_UNSAFE));
         assertThat(emptyStat, lessThan(stat));
         assertThat(assertThrows(EISSystemException.class,
                                 () -> connection.getACL("/node1", stat.stat())).getCause(),
@@ -380,7 +374,7 @@ public class ZooKeeperConnectionTest {
     @Test
     @OperateOnDeployment("test")
     public void testGetEphemerals() throws ResourceException {
-        connection.create("/node0", "value0".getBytes(), allAnyoneUnsafe, CreateMode.EPHEMERAL);
+        connection.create("/node0", "value0".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
         assertThat(connection.getEphemerals().size(), is(1));
         connection.delete("/node0");
     }
@@ -388,8 +382,8 @@ public class ZooKeeperConnectionTest {
     @Test
     @OperateOnDeployment("test")
     public void testGetEphemeralsPrefix() throws ResourceException {
-        connection.create("/node0", "value0".getBytes(), allAnyoneUnsafe, CreateMode.EPHEMERAL);
-        connection.create("/node1", "value1".getBytes(), allAnyoneUnsafe, CreateMode.EPHEMERAL);
+        connection.create("/node0", "value0".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
+        connection.create("/node1", "value1".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
 
         assertThat(connection.getEphemerals("/node").size(), is(2));
         assertThat(connection.getEphemerals("/notfound").size(), is(0));
@@ -401,28 +395,28 @@ public class ZooKeeperConnectionTest {
     @Test
     @OperateOnDeployment("test")
     public void testSetACL() throws ResourceException {
-        Stat stat = connection.setACL("/node0", allAnyoneUnsafe);
+        Stat stat = connection.setACL("/node0", ZooDefs.Ids.OPEN_ACL_UNSAFE);
         assertThat(stat.getAversion(), is(1));
         assertThat(assertThrows(EISSystemException.class,
-                                () -> connection.setACL("/node1", allAnyoneUnsafe)).getCause(),
+                                () -> connection.setACL("/node1", ZooDefs.Ids.OPEN_ACL_UNSAFE)).getCause(),
                    instanceOf(KeeperException.NoNodeException.class));
     }
 
     @Test
     @OperateOnDeployment("test")
     public void testSetACLVersion() throws ResourceException {
-        Stat stat = connection.setACL("/node0", allAnyoneUnsafe, 0);
+        Stat stat = connection.setACL("/node0", ZooDefs.Ids.OPEN_ACL_UNSAFE, 0);
         assertThat(stat.getAversion(), is(1));
 
-        stat = connection.setACL("/node0", allAnyoneUnsafe, -1);
+        stat = connection.setACL("/node0", ZooDefs.Ids.OPEN_ACL_UNSAFE, -1);
         assertThat(stat.getAversion(), is(2));
 
         assertThat(assertThrows(EISSystemException.class,
-                                () -> connection.setACL("/node0", allAnyoneUnsafe, 3)).getCause(),
+                                () -> connection.setACL("/node0", ZooDefs.Ids.OPEN_ACL_UNSAFE, 3)).getCause(),
                    instanceOf(KeeperException.BadVersionException.class));
 
         assertThat(assertThrows(EISSystemException.class,
-                                () -> connection.setACL("/node1", allAnyoneUnsafe, 0)).getCause(),
+                                () -> connection.setACL("/node1", ZooDefs.Ids.OPEN_ACL_UNSAFE, 0)).getCause(),
                    instanceOf(KeeperException.NoNodeException.class));
     }
 

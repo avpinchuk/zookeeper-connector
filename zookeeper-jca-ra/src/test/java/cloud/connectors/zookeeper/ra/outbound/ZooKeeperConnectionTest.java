@@ -64,7 +64,7 @@ public class ZooKeeperConnectionTest {
     public final TestName testName = new TestName();
 
 
-    @Deployment(name = "rar", order = 1, testable = false)
+    @Deployment(order = 1, testable = false)
     public static ResourceAdapterArchive createResourceAdapterDeployment() {
         return ResourceAdapterUtil.getResourceAdapter();
     }

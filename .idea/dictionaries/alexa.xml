@@ -5,6 +5,7 @@
       <w>chroot</w>
       <w>ephemerals</w>
       <w>javadocs</w>
+      <w>nonrecursive</w>
       <w>pinchuk</w>
     </words>
   </dictionary>

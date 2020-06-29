@@ -12,22 +12,38 @@ import cloud.connectors.zookeeper.ra.outbound.ZooKeeperConnectionImpl;
 import cloud.connectors.zookeeper.ra.outbound.ZooKeeperManagedConnection;
 import cloud.connectors.zookeeper.ra.outbound.ZooKeeperManagedConnectionFactory;
 import cloud.connectors.zookeeper.ra.outbound.ZooKeeperManagedConnectionMetadata;
+import org.jboss.arquillian.container.test.api.Deployment;
+import org.jboss.arquillian.junit.Arquillian;
 import org.jboss.shrinkwrap.api.ShrinkWrap;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.jboss.shrinkwrap.api.spec.ResourceAdapterArchive;
 import org.jboss.shrinkwrap.resolver.api.maven.Maven;
 import org.jboss.shrinkwrap.resolver.api.maven.ScopeType;
 import org.jboss.shrinkwrap.resolver.api.maven.coordinate.MavenDependencies;
+import org.junit.Rule;
+import org.junit.rules.TestName;
+import org.junit.runner.RunWith;
 
 import java.io.File;
 
-public final class ResourceAdapterUtil {
+@RunWith(Arquillian.class)
+public abstract class AbstractZooKeeperTest {
 
-    private ResourceAdapterUtil() {
-        throw new AssertionError();
-    }
+    protected static final String connectString = "localhost:2182";
 
-    public static ResourceAdapterArchive getResourceAdapter() {
+    protected static final int port = 2182;
+
+    protected static final int sessionTimeout = 3_000;
+
+    protected static final long ttl = 50L;
+
+    protected static ZooKeeperTestingServer zooKeeperServer;
+
+    @Rule
+    public final TestName testName = new TestName();
+
+    @Deployment(order = 1, testable = false)
+    public static ResourceAdapterArchive createResourceAdapterDeployment() {
         // Resolve libraries from effective pom
         File[] libraries = Maven.resolver()
                                 .loadPomFromFile("pom.xml")
@@ -47,7 +63,7 @@ public final class ResourceAdapterUtil {
                                        .addClass(ZooKeeperConnection.class)
                                        .addClass(ZooKeeperConnectionFactory.class);
         // JCA implementation
-        JavaArchive jcaRa = ShrinkWrap.create(JavaArchive.class, "zookeeper-jaca-ra.jar")
+        JavaArchive jcaRa = ShrinkWrap.create(JavaArchive.class, "zookeeper-jca-ra.jar")
                                       .addClass(ZooKeeperResourceAdapter.class)
                                       .addClass(ZooKeeperActivationSpec.class)
                                       .addClass(ZooKeeperWatcher.class)

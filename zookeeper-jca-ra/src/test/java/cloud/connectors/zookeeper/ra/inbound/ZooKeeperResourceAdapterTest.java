@@ -1,7 +1,6 @@
 package cloud.connectors.zookeeper.ra.inbound;
 
-import cloud.connectors.zookeeper.ra.ResourceAdapterUtil;
-import cloud.connectors.zookeeper.ra.ServerDefs;
+import cloud.connectors.zookeeper.ra.AbstractZooKeeperTest;
 import cloud.connectors.zookeeper.ra.ZooKeeperTestingServer;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.Watcher;
@@ -10,17 +9,12 @@ import org.apache.zookeeper.ZooKeeper;
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.container.test.api.OperateOnDeployment;
 import org.jboss.arquillian.container.test.api.RunAsClient;
-import org.jboss.arquillian.junit.Arquillian;
 import org.jboss.shrinkwrap.api.ShrinkWrap;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
-import org.jboss.shrinkwrap.api.spec.ResourceAdapterArchive;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TestName;
-import org.junit.runner.RunWith;
 
 import javax.ejb.EJB;
 import java.io.IOException;
@@ -28,19 +22,8 @@ import java.io.IOException;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
-@RunWith(Arquillian.class)
 @SuppressWarnings("ArquillianTooManyDeployment")
-public class ZooKeeperResourceAdapterTest {
-
-    private static ZooKeeperTestingServer zooKeeperServer;
-
-    @Rule
-    public final TestName testName = new TestName();
-
-    @Deployment(order = 1, testable = false)
-    public static ResourceAdapterArchive createResourceAdapterDeployment() {
-        return ResourceAdapterUtil.getResourceAdapter();
-    }
+public class ZooKeeperResourceAdapterTest extends AbstractZooKeeperTest {
 
     @Deployment(name = "test", order = 2)
     public static JavaArchive createDeployment() {
@@ -53,17 +36,17 @@ public class ZooKeeperResourceAdapterTest {
     @BeforeClass
     @RunAsClient
     public static void setUpClass() throws Exception {
-        zooKeeperServer = new ZooKeeperTestingServer(ServerDefs.port);
+        zooKeeperServer = new ZooKeeperTestingServer(port);
         zooKeeperServer.start();
 
-        try (ZooKeeper zooKeeper = new ZooKeeper(ServerDefs.connectString, ServerDefs.sessionTimeout, null)){
+        try (ZooKeeper zooKeeper = new ZooKeeper(connectString, sessionTimeout, null)){
             zooKeeper.create("/recursive", null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
             zooKeeper.create("/nonrecursive", null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
         }
     }
 
     /**
-     * We doesn't cleanup create nodes because they automatically go away after
+     * We doesn't cleanup created nodes because they automatically go away after
      * server shutdown.
      *
      * @throws IOException if an error occurred
@@ -77,7 +60,7 @@ public class ZooKeeperResourceAdapterTest {
     @Before
     @RunAsClient
     public void setUp() throws Exception {
-        try (ZooKeeper zooKeeper = new ZooKeeper(ServerDefs.connectString, ServerDefs.sessionTimeout, null)) {
+        try (ZooKeeper zooKeeper = new ZooKeeper(connectString, sessionTimeout, null)) {
             switch (testName.getMethodName()) {
                 case "testNodeCreatedRecursive":
                     zooKeeper.create("/recursive/node", null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);

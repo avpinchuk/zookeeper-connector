@@ -1,7 +1,6 @@
 package cloud.connectors.zookeeper.ra.outbound;
 
-import cloud.connectors.zookeeper.ra.ResourceAdapterUtil;
-import cloud.connectors.zookeeper.ra.ServerDefs;
+import cloud.connectors.zookeeper.ra.AbstractZooKeeperTest;
 import cloud.connectors.zookeeper.ra.ZooKeeperTestingServer;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -12,18 +11,13 @@ import org.apache.zookeeper.data.Stat;
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.container.test.api.OperateOnDeployment;
 import org.jboss.arquillian.container.test.api.RunAsClient;
-import org.jboss.arquillian.junit.Arquillian;
 import org.jboss.shrinkwrap.api.ShrinkWrap;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
-import org.jboss.shrinkwrap.api.spec.ResourceAdapterArchive;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TestName;
-import org.junit.runner.RunWith;
 
 import javax.ejb.EJB;
 import javax.resource.ResourceException;
@@ -41,26 +35,14 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.lessThan;
 import static org.junit.Assert.assertThrows;
 
-@RunWith(Arquillian.class)
 @SuppressWarnings("ArquillianTooManyDeployment")
-public class ZooKeeperConnectionTest {
-
-    private static ZooKeeperTestingServer zooKeeperServer;
+public class ZooKeeperConnectionTest extends AbstractZooKeeperTest {
 
     private final List<String> nodes = new ArrayList<>();
 
     private final ComparableStat emptyStat = new ComparableStat();
 
     private final EnumSet<CreateMode> createModes = EnumSet.allOf(CreateMode.class);
-
-    @Rule
-    public final TestName testName = new TestName();
-
-
-    @Deployment(order = 1, testable = false)
-    public static ResourceAdapterArchive createResourceAdapterDeployment() {
-        return ResourceAdapterUtil.getResourceAdapter();
-    }
 
     @Deployment(name = "test", order = 2)
     public static JavaArchive createDeployment() {
@@ -72,7 +54,7 @@ public class ZooKeeperConnectionTest {
     @BeforeClass
     @RunAsClient
     public static void setUpClass() throws Exception {
-        zooKeeperServer = new ZooKeeperTestingServer(ServerDefs.port);
+        zooKeeperServer = new ZooKeeperTestingServer(port);
         zooKeeperServer.start();
     }
 
@@ -88,12 +70,12 @@ public class ZooKeeperConnectionTest {
         ZooKeeper zooKeeper;
         switch (testName.getMethodName()) {
             case "testDelete":
-                zooKeeper = new ZooKeeper(ServerDefs.connectString, ServerDefs.sessionTimeout, null);
+                zooKeeper = new ZooKeeper(connectString, sessionTimeout, null);
                 zooKeeper.create("/node0", "value0".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
                 zooKeeper.close();
                 break;
             case "testDeleteVersion":
-                zooKeeper = new ZooKeeper(ServerDefs.connectString, ServerDefs.sessionTimeout, null);
+                zooKeeper = new ZooKeeper(connectString, sessionTimeout, null);
                 zooKeeper.create("/node0", "value0".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
                 zooKeeper.create("/node1", "value1".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
                 zooKeeper.close();
@@ -107,14 +89,14 @@ public class ZooKeeperConnectionTest {
             case "testSetACLVersion":
             case "testSetData":
             case "testSetDataVersion":
-                zooKeeper = new ZooKeeper(ServerDefs.connectString, ServerDefs.sessionTimeout, null);
+                zooKeeper = new ZooKeeper(connectString, sessionTimeout, null);
                 nodes.add(zooKeeper.create("/node0", "value0".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT));
                 zooKeeper.close();
                 break;
             case "testGetAllChildrenNumber":
             case "testGetChildren":
             case "testGetChildrenStat":
-                zooKeeper = new ZooKeeper(ServerDefs.connectString, ServerDefs.sessionTimeout, null);
+                zooKeeper = new ZooKeeper(connectString, sessionTimeout, null);
                 nodes.add(zooKeeper.create("/node0", "value0".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT));
                 zooKeeper.create("/node0/node00", "value00".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
                 zooKeeper.create("/node0/node01", "value01".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
@@ -130,7 +112,7 @@ public class ZooKeeperConnectionTest {
     @RunAsClient
     public void tearDown() throws Exception {
         if (!nodes.isEmpty()) {
-            ZooKeeper zooKeeper = new ZooKeeper(ServerDefs.connectString, ServerDefs.sessionTimeout, null);
+            ZooKeeper zooKeeper = new ZooKeeper(connectString, sessionTimeout, null);
             nodes.forEach(node -> {
                 try {
                     // we doesn't create zk tree deeper than 2
@@ -245,12 +227,12 @@ public class ZooKeeperConnectionTest {
             byte[] data = ("value" + i).getBytes();
 
             ComparableStat stat = new ComparableStat();
-            nodes.add(connection.create(path, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, createMode, stat.stat(), ServerDefs.ttl));
+            nodes.add(connection.create(path, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, createMode, stat.stat(), ttl));
             assertThat(emptyStat, lessThan(stat));
 
             ComparableStat stat2 = new ComparableStat();
             if (createMode.isSequential()) {
-                nodes.add(connection.create(path, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, createMode, stat2.stat(), ServerDefs.ttl));
+                nodes.add(connection.create(path, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, createMode, stat2.stat(), ttl));
                 assertThat(stat, lessThan(stat2));
             } else {
                 assertThat(assertThrows(EISSystemException.class,
@@ -259,7 +241,7 @@ public class ZooKeeperConnectionTest {
                                                                 ZooDefs.Ids.OPEN_ACL_UNSAFE,
                                                                 createMode,
                                                                 stat2.stat(),
-                                                                ServerDefs.ttl)).getCause(),
+                                                                ttl)).getCause(),
                            instanceOf(KeeperException.NodeExistsException.class));
             }
             i++;

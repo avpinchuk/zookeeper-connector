@@ -18,8 +18,6 @@ import org.junit.Test;
 
 import javax.ejb.EJB;
 import java.io.IOException;
-import java.time.LocalDateTime;
-import java.util.concurrent.CountDownLatch;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;

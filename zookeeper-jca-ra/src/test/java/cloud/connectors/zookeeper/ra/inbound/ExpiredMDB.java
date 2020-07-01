@@ -13,6 +13,7 @@ import javax.ejb.MessageDriven;
     @ActivationConfigProperty(propertyName = "sessionTimeout", propertyValue = "2000"),
     @ActivationConfigProperty(propertyName = "recursive", propertyValue = "true")
 })
+@SuppressWarnings("unused")
 public class ExpiredMDB implements ZooKeeperListener {
 
     @EJB
